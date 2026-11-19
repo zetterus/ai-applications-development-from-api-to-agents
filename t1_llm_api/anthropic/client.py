@@ -28,14 +28,10 @@ class AnthropicAIClient(AIClient):
             api_key (str): The Anthropic API key for authentication.
             system_prompt (str): The system instruction to guide Claude's behavior.
         """
-        #TODO:
-        # Call to __init__ of super class
-        # Add Anthropic and AsyncAnthropic clients https://github.com/anthropics/anthropic-sdk-python?tab=readme-ov-file#usage
-        # (In readme you can find samples with both of these clients)
-        # Useful links with request/response samples:
-        #   - https://docs.anthropic.com/en/api/overview
-        #   - https://docs.anthropic.com/en/api/messages
-        raise NotImplementedError
+        super().__init__(endpoint, model_name, api_key, system_prompt)
+        self._client = Anthropic(api_key=self._api_key, base_url=self._endpoint or None)
+        self._async_client = AsyncAnthropic(api_key=self._api_key, base_url=self._endpoint or None)
+
 
     def response(self, messages: list[Message], **kwargs) -> Message:
         """
@@ -53,12 +49,22 @@ class AnthropicAIClient(AIClient):
             Response content blocks are concatenated into a single text response.
             The response is printed to stdout before being returned.
         """
-        #TODO:
-        # - Add System prompt
-        # - Call client
-        # - Print response to console
-        # - Return ASSISTANT message
-        raise NotImplementedError
+        converted = [m.to_dict() for m in messages if m.role in (Role.ASSISTANT, Role.USER)]
+        limit = kwargs.pop("max_tokens", 1024)
+        response = self._client.messages.create(
+            model=self._model_name,
+            max_tokens=limit,
+            messages=converted,
+            system=self._system_prompt,
+            **kwargs)
+        collector = []
+        for part in response.content:
+            if part.type == "text":
+                collector.append(part.text)
+        text = "".join(collector)
+        print(text)
+        return Message(role=Role.ASSISTANT, content=text)
+
 
     async def stream_response(self, messages: list[Message], **kwargs) -> Message:
         """
