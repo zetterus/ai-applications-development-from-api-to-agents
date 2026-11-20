@@ -13,7 +13,7 @@ class Message:
     tool_calls: list[dict[str, Any]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        result = {
+        result: dict[str, Any] = {
             "role": self.role.value,
             "content": self.content
         }
