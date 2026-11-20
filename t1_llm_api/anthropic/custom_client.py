@@ -90,14 +90,44 @@ class CustomAnthropicAIClient(AIClient):
             Stops processing when 'message_stop' event is received.
             Each delta is printed to stdout as it arrives.
         """
-        #TODO:
-        # https://docs.anthropic.com/en/docs/build-with-claude/streaming
-        # - Prepare headers with api key, anthropic version and content type
-        # - Add System prompt
-        # - Execute post request to AI API (use `aihttp`)
-        # - Handle stream with chunks
-        # - Parse response
-        # - Print chunks to console
-        # - Return ASSISTANT message
-        raise NotImplementedError
+        limit = kwargs.pop("max_tokens", 1024)
+        converted = [m.to_dict() for m in messages if m.role in (Role.ASSISTANT, Role.USER)]
+        headers = {
+            "x-api-key": self._api_key,
+            "anthropic-version": "2026-10-21",
+            "Content-Type": "application/json",
+        }
+        body = {
+            "model": self._model_name,
+            "max_tokens": limit,
+            "system": self._system_prompt,
+            "messages": converted,
+            "stream": True,
+        }
 
+        collector = []
+
+        timeout = aiohttp.ClientTimeout(total=60)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(
+                    url=self._endpoint,
+                    json=body,
+                    headers=headers) as response:
+                if response.status != 200:
+                    details = await response.text()
+                    raise Exception(f"Service returned {response.status}: {await response.text()}")
+                async for part in response.content:
+                    line = part.decode("utf-8").strip()
+                    if not line:
+                        continue
+                    if line.startswith("data"):
+                        processed_line = json.loads(line[len("data: "):])
+                        if processed_line["type"] == "message_stop":
+                            break
+                        if processed_line["type"] == "content_block_delta" and processed_line["delta"]["type"] == "text_delta":
+                            text = processed_line["delta"]["text"]
+                            print(text, end="", flush=True)
+                            collector.append(text)
+        print()
+
+        return Message(role=Role.ASSISTANT, content="".join(collector))

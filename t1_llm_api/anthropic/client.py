@@ -84,8 +84,8 @@ class AnthropicAIClient(AIClient):
             Listens for 'content_block_delta' events with text deltas.
             Each delta is printed to stdout as it arrives for real-time display.
         """
-        converted = [m.to_dict() for m in messages if m.role in (Role.ASSISTANT, Role.USER)]
         limit = kwargs.pop("max_tokens", 1024)
+        converted = [m.to_dict() for m in messages if m.role in (Role.ASSISTANT, Role.USER)]
         async with self._async_client.messages.stream(
             model=self._model_name,
             max_tokens=limit,
