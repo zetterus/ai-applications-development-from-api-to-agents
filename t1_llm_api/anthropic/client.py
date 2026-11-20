@@ -84,10 +84,18 @@ class AnthropicAIClient(AIClient):
             Listens for 'content_block_delta' events with text deltas.
             Each delta is printed to stdout as it arrives for real-time display.
         """
-        # TODO:
-        # - Add System prompt
-        # - Call client with streaming mode
-        # - Handle stream with chunks
-        # - Print response to console
-        # - Return ASSISTANT message
-        raise NotImplementedError
+        converted = [m.to_dict() for m in messages if m.role in (Role.ASSISTANT, Role.USER)]
+        limit = kwargs.pop("max_tokens", 1024)
+        async with self._async_client.messages.stream(
+            model=self._model_name,
+            max_tokens=limit,
+            messages=converted,
+            system=self._system_prompt,
+            **kwargs) as stream:
+            collector = []
+            async for chunk in stream.text_stream:
+                print(chunk, end="", flush=True)
+                collector.append(chunk)
+        print()
+        text = "".join(collector)
+        return Message(role=Role.ASSISTANT, content=text)
