@@ -21,4 +21,24 @@ async def start(stream: bool, client: AIClient) -> None:
                       If False, use synchronous responses (complete response at once).
         client (AIClient): The AI client instance to use for generating responses.
     """
-    raise NotImplementedError
+    history = Conversation()
+
+    while True:
+        user_input = input("> ").strip()
+        if user_input.lower() == 'exit':
+            break
+        if not user_input:
+            print("Request can't be empty.")
+            continue
+        if len(user_input) > 10000:
+            print("Request is too long. Maximum length is 10000 characters.")
+            continue
+
+        history.add_message(Message(role=Role.USER, content=user_input))
+        if stream:
+            history.add_message(await client.stream_response(history.get_messages()))
+        else:
+            messages = history.get_messages()
+            answer = client.response(messages)
+            print(answer.content)
+            history.add_message(answer)

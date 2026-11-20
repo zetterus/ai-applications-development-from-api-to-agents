@@ -84,7 +84,7 @@ class AnthropicAIClient(AIClient):
             Listens for 'content_block_delta' events with text deltas.
             Each delta is printed to stdout as it arrives for real-time display.
         """
-        #TODO:
+        # TODO:
         # - Add System prompt
         # - Call client with streaming mode
         # - Handle stream with chunks
