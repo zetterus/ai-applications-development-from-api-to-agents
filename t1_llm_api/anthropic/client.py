@@ -49,8 +49,8 @@ class AnthropicAIClient(AIClient):
             Response content blocks are concatenated into a single text response.
             The response is printed to stdout before being returned.
         """
-        converted = [m.to_dict() for m in messages if m.role in (Role.ASSISTANT, Role.USER)]
         limit = kwargs.pop("max_tokens", 1024)
+        converted = [m.to_dict() for m in messages if m.role in (Role.ASSISTANT, Role.USER)]
         response = self._client.messages.create(
             model=self._model_name,
             max_tokens=limit,

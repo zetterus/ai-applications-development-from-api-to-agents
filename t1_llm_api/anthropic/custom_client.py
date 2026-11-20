@@ -36,15 +36,39 @@ class CustomAnthropicAIClient(AIClient):
             Claude's API returns content as an array of content blocks.
             The response is printed to stdout before being returned.
         """
-        #TODO:
-        # https://docs.anthropic.com/en/api/messages-examples
-        # - Prepare headers with api key, anthropic version and content type
-        # - Add System prompt
-        # - Execute post request to AI API (use `requests`)
-        # - Parse response
-        # - Print response to console
-        # - Return ASSISTANT message
-        raise NotImplementedError
+        limit = kwargs.pop("max_tokens", 1024)
+        converted = [m.to_dict() for m in messages if m.role in (Role.ASSISTANT, Role.USER)]
+        headers = {
+            "x-api-key": self._api_key,
+            "anthropic-version": "2026-10-21",
+            "Content-Type": "application/json",
+        }
+        body = {
+            "model": self._model_name,
+            "max_tokens": limit,
+            "system": self._system_prompt,
+            "messages": converted,
+        }
+        try:
+            response = requests.post(url=self._endpoint, json=body, headers=headers, timeout=60)
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Could not reach Claude's API: {e}") from e
+
+        if response.status_code != 200:
+            raise Exception(f"An error occurred while connecting to Claude's API: {response.status_code}. Response: {response.text}")
+
+        data = response.json()
+
+        collector = []
+        for part in data.get("content") or []:
+            if part["type"] == "text":
+                collector.append(part["text"])
+        if not collector:
+            raise ValueError(f"Claude's API response contains no text content blocks: {data}")
+        text = "".join(collector)
+        print(text)
+        return Message(role=Role.ASSISTANT, content=text)
+
 
     async def stream_response(self, messages: list[Message], **kwargs) -> Message:
         """
