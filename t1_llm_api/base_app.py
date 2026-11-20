@@ -40,5 +40,4 @@ async def start(stream: bool, client: AIClient) -> None:
         else:
             messages = history.get_messages()
             answer = client.response(messages)
-            print(answer.content)
             history.add_message(answer)

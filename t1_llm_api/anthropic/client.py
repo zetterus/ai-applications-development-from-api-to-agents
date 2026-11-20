@@ -29,8 +29,8 @@ class AnthropicAIClient(AIClient):
             system_prompt (str): The system instruction to guide Claude's behavior.
         """
         super().__init__(endpoint, model_name, api_key, system_prompt)
-        self._client = Anthropic(api_key=self._api_key, base_url=self._endpoint or None)
-        self._async_client = AsyncAnthropic(api_key=self._api_key, base_url=self._endpoint or None)
+        self._client = Anthropic(api_key=self._api_key)
+        self._async_client = AsyncAnthropic(api_key=self._api_key)
 
 
     def response(self, messages: list[Message], **kwargs) -> Message:

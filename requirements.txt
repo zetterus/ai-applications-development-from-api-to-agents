@@ -22,4 +22,5 @@ presidio-analyzer==2.2.364
 presidio_anonymizer==2.2.364
 pydantic==2.13.5
 pyyaml>=6.0
+python-dotenv>=1.0.1
 python-jose==3.5.0
