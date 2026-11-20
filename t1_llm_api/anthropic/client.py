@@ -28,14 +28,9 @@ class AnthropicAIClient(AIClient):
             api_key (str): The Anthropic API key for authentication.
             system_prompt (str): The system instruction to guide Claude's behavior.
         """
-        #TODO:
-        # Call to __init__ of super class
-        # Add Anthropic and AsyncAnthropic clients https://github.com/anthropics/anthropic-sdk-python?tab=readme-ov-file#usage
-        # (In readme you can find samples with both of these clients)
-        # Useful links with request/response samples:
-        #   - https://docs.anthropic.com/en/api/overview
-        #   - https://docs.anthropic.com/en/api/messages
-        raise NotImplementedError
+        super().__init__(endpoint, model_name, api_key, system_prompt)
+        self._client = Anthropic(api_key=self._api_key, base_url=self._endpoint or None)
+        self._async_client = AsyncAnthropic(api_key=self._api_key, base_url=self._endpoint or None)
 
     def response(self, messages: list[Message], **kwargs) -> Message:
         """
@@ -53,7 +48,7 @@ class AnthropicAIClient(AIClient):
             Response content blocks are concatenated into a single text response.
             The response is printed to stdout before being returned.
         """
-        #TODO:
+        # TODO:
         # - Add System prompt
         # - Call client
         # - Print response to console
@@ -78,7 +73,7 @@ class AnthropicAIClient(AIClient):
             Listens for 'content_block_delta' events with text deltas.
             Each delta is printed to stdout as it arrives for real-time display.
         """
-        #TODO:
+        # TODO:
         # - Add System prompt
         # - Call client with streaming mode
         # - Handle stream with chunks
