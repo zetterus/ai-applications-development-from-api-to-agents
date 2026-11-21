@@ -28,10 +28,10 @@ class GeminiAIClient(AIClient):
             api_key (str): The Google API key for authentication.
             system_prompt (str): The system instruction to guide the model's behavior.
         """
-        #TODO:
-        # Call to __init__ of super class
-        # Add genai.Client https://ai.google.dev/gemini-api/docs/text-generation#python_4
-        raise NotImplementedError
+        super().__init__(endpoint, model_name, api_key, system_prompt)
+        client = genai.Client(api_key=self._api_key)
+        self._client = client
+
 
     def response(self, messages: list[Message], **kwargs) -> Message:
         """
@@ -48,6 +48,30 @@ class GeminiAIClient(AIClient):
             Gemini uses 'system_instruction' parameter for system-level guidance.
             The response is printed to stdout before being returned.
         """
+        # в response используйте синхронный client.models;
+        limit = kwargs.pop("max_tokens", 1024)
+        config =
+
+        contents = [
+            types.Content(
+                role=m.role,
+                parts=[types.Part.from_text(text=m.content)]
+            )
+            for m in messages
+        ]
+
+        response = self._client.models.generate_content(
+            model=self._model_name,
+            contents=contents,
+            config=config,
+        )
+        collector = []
+        for part in response.content:
+            if part.type == "text":
+                collector.append(part.text)
+        text = "".join(collector)
+        print(text)
+        return Message(role=Role.ASSISTANT, content=text)
         #TODO:
         # - Add System prompt
         # - Call client
@@ -73,6 +97,7 @@ class GeminiAIClient(AIClient):
             Uses the async streaming interface provided by the Gemini SDK.
             Each chunk's text is printed to stdout as it arrives.
         """
+        # в stream_response используйте асинхронный client.aio.models и метод для стриминга.
         #TODO:
         # - Add System prompt
         # - Call client with streaming mode
