@@ -83,7 +83,7 @@ class UserServiceClient:
         response = requests.put(
             url=f"{USER_SERVICE_ENDPOINT}/v1/users/{user_id}",
             headers=headers,
-            json=user_update_model.model_dump()
+            json=user_update_model.model_dump(exclude_none=True)
         )
 
         if response.status_code == 200:

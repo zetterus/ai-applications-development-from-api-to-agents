@@ -1,3 +1,5 @@
+import inspect
+
 from pathlib import Path
 
 from fastmcp import FastMCP
@@ -18,6 +20,7 @@ async def get_user_by_id(user_id: int) -> str:
     except Exception as e:
         return f"Error retrieving user {user_id}: {e}"
 
+
 @mcp.tool()
 async def delete_user(user_id: int) -> str:
     """Delete a user by numeric user ID. This cannot be undone."""
@@ -25,6 +28,7 @@ async def delete_user(user_id: int) -> str:
         return user_service_client.delete_user(user_id)
     except Exception as e:
         return f"Error deleting user {user_id}: {e}"
+
 
 @mcp.tool()
 async def search_user(search_request: UserSearchRequest) -> str:
@@ -34,6 +38,7 @@ async def search_user(search_request: UserSearchRequest) -> str:
     except Exception as e:
         return f"Error searching users: {e}"
 
+
 @mcp.tool()
 async def add_user(user_data: UserCreate) -> str:
     """Create a new user. name, surname, email and about_me are required."""
@@ -41,6 +46,7 @@ async def add_user(user_data: UserCreate) -> str:
         return user_service_client.add_user(user_data)
     except Exception as e:
         return f"Error adding user: {e}"
+
 
 @mcp.tool()
 async def update_user(user_id: int, user_data: UserUpdate) -> str:
@@ -52,17 +58,13 @@ async def update_user(user_id: int, user_data: UserUpdate) -> str:
 
 
 # ==================== MCP RESOURCES ====================
-
-# TODO:
-# Provides screenshot with Swagger endpoints of User Service. We need for the case to show you that MCP servers can
-# provide some static resources.
-# https://gofastmcp.com/servers/resources
-# ---
-# 1. Create async method `get_flow_diagram` that returns bytes and mark as `@mcp.resource` with:
-#   - uri = "users-management://flow-diagram"
-#   - mime_type="image/png"
-# 2. You need to get `flow.png` picture from `mcp_server` folder and return it as bytes.
-# 3. Don't forget to provide resource description
+@mcp.resource(
+    uri="users-management://flow-diagram",
+    mime_type="image/png",
+)
+async def get_flow_diagram() -> bytes:
+    """Flow diagram image of the Users Management system: how the agent, MCP client, MCP server and User Service interact."""
+    return (Path(__file__).parent.parent / "flow.png").read_bytes()
 
 
 # ==================== MCP PROMPTS ====================
@@ -72,124 +74,130 @@ async def update_user(user_id: int, user_data: UserUpdate) -> str:
 # https://gofastmcp.com/servers/prompts
 # ---
 # Prompts are prepared, you need just properly return them and provide descriptions of them"
-"""
-You are helping users search through a dynamic user database. The database contains 
-realistic synthetic user profiles with the following searchable fields:
 
-## Available Search Parameters
-- **name**: First name (partial matching, case-insensitive)
-- **surname**: Last name (partial matching, case-insensitive)  
-- **email**: Email address (partial matching, case-insensitive)
-- **gender**: Exact match (male, female, other, prefer_not_to_say)
+@mcp.prompt
+async def user_search_guide() -> str:
+    """Guide for searching the user database: available search fields, partial matching rules, search strategies and example queries."""
+    return inspect.cleandoc("""
+    You are helping users search through a dynamic user database. The database contains 
+    realistic synthetic user profiles with the following searchable fields:
+    
+    ## Available Search Parameters
+    - **name**: First name (partial matching, case-insensitive)
+    - **surname**: Last name (partial matching, case-insensitive)  
+    - **email**: Email address (partial matching, case-insensitive)
+    - **gender**: Exact match (male, female, other, prefer_not_to_say)
+    
+    ## Search Strategy Guidance
+    
+    ### For Name Searches
+    - Use partial names: "john" finds John, Johnny, Johnson, etc.
+    - Try common variations: "mike" vs "michael", "liz" vs "elizabeth"
+    - Consider cultural name variations
+    
+    ### For Email Searches  
+    - Search by domain: "gmail" for all Gmail users
+    - Search by name patterns: "john" for emails containing john
+    - Use company names to find business emails
+    
+    ### For Demographic Analysis
+    - Combine gender with other criteria for targeted searches
+    - Use broad searches first, then narrow down
+    
+    ### Effective Search Combinations
+    - Name + Gender: Find specific demographic segments
+    - Email domain + Surname: Find business contacts
+    - Partial names: Cast wider nets for common names
+    
+    ## Example Search Patterns
+    ```
+    "Find all Johns" → name="john"
+    "Gmail users named Smith" → email="gmail" + surname="smith"  
+    "Female users with company emails" → gender="female" + email="company"
+    "Users with Johnson surname" → surname="johnson"
+    ```
+    
+    ## Tips for Better Results
+    1. Start broad, then narrow down
+    2. Try variations of names (John vs Johnny)
+    3. Use partial matches creatively
+    4. Combine multiple criteria for precision
+    5. Remember searches are case-insensitive
+    
+    When helping users search, suggest multiple search strategies and explain 
+    why certain approaches might be more effective for their goals.
+    """)
 
-## Search Strategy Guidance
-
-### For Name Searches
-- Use partial names: "john" finds John, Johnny, Johnson, etc.
-- Try common variations: "mike" vs "michael", "liz" vs "elizabeth"
-- Consider cultural name variations
-
-### For Email Searches  
-- Search by domain: "gmail" for all Gmail users
-- Search by name patterns: "john" for emails containing john
-- Use company names to find business emails
-
-### For Demographic Analysis
-- Combine gender with other criteria for targeted searches
-- Use broad searches first, then narrow down
-
-### Effective Search Combinations
-- Name + Gender: Find specific demographic segments
-- Email domain + Surname: Find business contacts
-- Partial names: Cast wider nets for common names
-
-## Example Search Patterns
-```
-"Find all Johns" → name="john"
-"Gmail users named Smith" → email="gmail" + surname="smith"  
-"Female users with company emails" → gender="female" + email="company"
-"Users with Johnson surname" → surname="johnson"
-```
-
-## Tips for Better Results
-1. Start broad, then narrow down
-2. Try variations of names (John vs Johnny)
-3. Use partial matches creatively
-4. Combine multiple criteria for precision
-5. Remember searches are case-insensitive
-
-When helping users search, suggest multiple search strategies and explain 
-why certain approaches might be more effective for their goals.
-"""
-
-# Guides creation of realistic user profiles
-"""
-You are helping create realistic user profiles for the system. Follow these guidelines 
-to ensure data consistency and realism.
-
-## Required Fields
-- **name**: 2-50 characters, letters only, culturally appropriate
-- **surname**: 2-50 characters, letters only  
-- **email**: Valid format, must be unique in system
-- **about_me**: Rich, realistic biography (see guidelines below)
-
-## Optional Fields Best Practices
-- **phone**: Use E.164 format (+1234567890) when possible
-- **date_of_birth**: YYYY-MM-DD format, realistic ages (18-80)
-- **gender**: Use standard values (male, female, other, prefer_not_to_say)
-- **company**: Real-sounding company names
-- **salary**: $30,000-$200,000 range for employed individuals
-
-## Address Guidelines
-Provide complete, realistic addresses:
-- **country**: Full country names
-- **city**: Actual city names  
-- **street**: Realistic street addresses
-- **flat_house**: Apartment/unit format (Apt 123, Unit 5B, Suite 200)
-
-## Credit Card Guidelines  
-Generate realistic but non-functional card data:
-- **num**: 16 digits formatted as XXXX-XXXX-XXXX-XXXX
-- **cvv**: 3 digits (000-999)
-- **exp_date**: MM/YYYY format, future dates only
-
-## Biography Creation ("about_me")
-Create engaging, realistic biographies that include:
-
-### Personality Elements
-- 1-3 personality traits (curious, adventurous, analytical, etc.)
-- Authentic voice and writing style
-- Cultural and demographic appropriateness
-
-### Interests & Hobbies  
-- 2-4 specific hobbies or activities
-- 1-3 broader interests or passion areas
-- 1-2 life goals or aspirations
-
-### Biography Templates
-Use varied narrative structures:
-- "I'm a [trait] person who loves [hobbies]..."
-- "When I'm not working, you can find me [activity]..."  
-- "Life is all about balance for me. I enjoy [interests]..."
-- "As someone who's [trait], I find great joy in [hobby]..."
-
-## Data Validation Reminders
-- Email uniqueness is enforced (check existing users)
-- Phone numbers should follow consistent formatting
-- Date formats must be exact (YYYY-MM-DD)
-- Credit card expiration dates must be in the future
-- Salary values should be realistic for the demographic
-
-## Cultural Sensitivity
-- Match names to appropriate cultural backgrounds
-- Consider regional variations in address formats
-- Use realistic company names for the user's location
-- Ensure hobbies and interests are culturally appropriate
-
-When creating profiles, aim for diversity in:
-- Geographic representation
-- Age distribution  
-- Interest variety
-- Socioeconomic backgrounds
-- Cultural backgrounds
-"""
+@mcp.prompt
+async def user_profile_creation_guide() -> str:
+    """Guide for creating realistic user profiles: required and optional fields, address and credit card formats, biography writing and validation rules."""
+    return inspect.cleandoc("""
+    You are helping create realistic user profiles for the system. Follow these guidelines 
+    to ensure data consistency and realism.
+    
+    ## Required Fields
+    - **name**: 2-50 characters, letters only, culturally appropriate
+    - **surname**: 2-50 characters, letters only  
+    - **email**: Valid format, must be unique in system
+    - **about_me**: Rich, realistic biography (see guidelines below)
+    
+    ## Optional Fields Best Practices
+    - **phone**: Use E.164 format (+1234567890) when possible
+    - **date_of_birth**: YYYY-MM-DD format, realistic ages (18-80)
+    - **gender**: Use standard values (male, female, other, prefer_not_to_say)
+    - **company**: Real-sounding company names
+    - **salary**: $30,000-$200,000 range for employed individuals
+    
+    ## Address Guidelines
+    Provide complete, realistic addresses:
+    - **country**: Full country names
+    - **city**: Actual city names  
+    - **street**: Realistic street addresses
+    - **flat_house**: Apartment/unit format (Apt 123, Unit 5B, Suite 200)
+    
+    ## Credit Card Guidelines  
+    Generate realistic but non-functional card data:
+    - **num**: 16 digits formatted as XXXX-XXXX-XXXX-XXXX
+    - **cvv**: 3 digits (000-999)
+    - **exp_date**: MM/YYYY format, future dates only
+    
+    ## Biography Creation ("about_me")
+    Create engaging, realistic biographies that include:
+    
+    ### Personality Elements
+    - 1-3 personality traits (curious, adventurous, analytical, etc.)
+    - Authentic voice and writing style
+    - Cultural and demographic appropriateness
+    
+    ### Interests & Hobbies  
+    - 2-4 specific hobbies or activities
+    - 1-3 broader interests or passion areas
+    - 1-2 life goals or aspirations
+    
+    ### Biography Templates
+    Use varied narrative structures:
+    - "I'm a [trait] person who loves [hobbies]..."
+    - "When I'm not working, you can find me [activity]..."  
+    - "Life is all about balance for me. I enjoy [interests]..."
+    - "As someone who's [trait], I find great joy in [hobby]..."
+    
+    ## Data Validation Reminders
+    - Email uniqueness is enforced (check existing users)
+    - Phone numbers should follow consistent formatting
+    - Date formats must be exact (YYYY-MM-DD)
+    - Credit card expiration dates must be in the future
+    - Salary values should be realistic for the demographic
+    
+    ## Cultural Sensitivity
+    - Match names to appropriate cultural backgrounds
+    - Consider regional variations in address formats
+    - Use realistic company names for the user's location
+    - Ensure hobbies and interests are culturally appropriate
+    
+    When creating profiles, aim for diversity in:
+    - Geographic representation
+    - Age distribution  
+    - Interest variety
+    - Socioeconomic backgrounds
+    - Cultural backgrounds
+    """)
