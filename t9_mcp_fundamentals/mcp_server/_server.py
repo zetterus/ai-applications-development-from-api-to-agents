@@ -5,30 +5,44 @@ from fastmcp import FastMCP
 from commons.user_service.client import UserServiceClient
 from commons.user_service.user_info import UserSearchRequest, UserCreate, UserUpdate
 
-#TODO:
-# 1. Create instance of FastMCP as `mcp` (or another name if you wish) with:
-#       - name is "users-management-mcp-server"
-#    (host and port are not set here, they are passed to `mcp.run()` in `http_server.py`)
-# 2. Create UserServiceClient
+mcp = FastMCP(name="users-management-mcp-server")
+user_service_client = UserServiceClient()
 
 
 # ==================== TOOLS ====================
-#TODO:
-# You need to add all the tools here. You will need to create 5 async methods and mark them as @mcp.tool() (if you
-# named FastMCP not as `mcp` then use the name that you have used). All tools return `str`.
-# Don't forget about tool description, it will LLM to identify when some particular tool should be used.
-# https://gofastmcp.com/servers/tools
-# ---
-# Tools:
-# 1. `get_user_by_id`:-
-# 2. `delete_user`:-
-# 3. `search_user`:-
-# 4. `add_user`:-
-# 5. `update_user`:-
+@mcp.tool()
+async def get_user_by_id(used_id: int) -> str:
+    """Return user with given id"""
+    return user_service_client.get_user(used_id)
+
+
+@mcp.tool()
+async def delete_user(used_id: int) -> str:
+    """Delete user with given id"""
+    return user_service_client.delete_user(used_id)
+
+
+@mcp.tool()
+async def search_user(user_data: UserCreate) -> str:
+    """Search user with given id"""
+    return user_service_client.search_users(*user_data)
+
+
+@mcp.tool()
+async def add_user(user_data: UserCreate) -> str:
+    """Add user with given data"""
+    return user_service_client.add_user(user_data)
+
+
+@mcp.tool()
+async def update_user(user_id: int, user_data: UserUpdate) -> str:
+    """Update user with given data"""
+    return user_service_client.update_user(user_id, user_data)
+
 
 # ==================== MCP RESOURCES ====================
 
-#TODO:
+# TODO:
 # Provides screenshot with Swagger endpoints of User Service. We need for the case to show you that MCP servers can
 # provide some static resources.
 # https://gofastmcp.com/servers/resources
@@ -42,7 +56,7 @@ from commons.user_service.user_info import UserSearchRequest, UserCreate, UserUp
 
 # ==================== MCP PROMPTS ====================
 
-#TODO:
+# TODO:
 # Provides static prompts that can be used by Clients
 # https://gofastmcp.com/servers/prompts
 # ---
@@ -168,4 +182,3 @@ When creating profiles, aim for diversity in:
 - Socioeconomic backgrounds
 - Cultural backgrounds
 """
-
