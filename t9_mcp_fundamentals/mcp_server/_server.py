@@ -11,33 +11,44 @@ user_service_client = UserServiceClient()
 
 # ==================== TOOLS ====================
 @mcp.tool()
-async def get_user_by_id(used_id: int) -> str:
-    """Return user with given id"""
-    return user_service_client.get_user(used_id)
-
-
-@mcp.tool()
-async def delete_user(used_id: int) -> str:
-    """Delete user with given id"""
-    return user_service_client.delete_user(used_id)
-
+async def get_user_by_id(user_id: int) -> str:
+    """Get a single user's full profile by numeric user ID."""
+    try:
+        return user_service_client.get_user(user_id)
+    except Exception as e:
+        return f"Error retrieving user {user_id}: {e}"
 
 @mcp.tool()
-async def search_user(user_data: UserCreate) -> str:
-    """Search user with given id"""
-    return user_service_client.search_users(*user_data)
+async def delete_user(user_id: int) -> str:
+    """Delete a user by numeric user ID. This cannot be undone."""
+    try:
+        return user_service_client.delete_user(user_id)
+    except Exception as e:
+        return f"Error deleting user {user_id}: {e}"
 
+@mcp.tool()
+async def search_user(search_request: UserSearchRequest) -> str:
+    """Search users by partial name, surname, email, or exact gender. All filters are optional."""
+    try:
+        return user_service_client.search_users(**search_request.model_dump())
+    except Exception as e:
+        return f"Error searching users: {e}"
 
 @mcp.tool()
 async def add_user(user_data: UserCreate) -> str:
-    """Add user with given data"""
-    return user_service_client.add_user(user_data)
-
+    """Create a new user. name, surname, email and about_me are required."""
+    try:
+        return user_service_client.add_user(user_data)
+    except Exception as e:
+        return f"Error adding user: {e}"
 
 @mcp.tool()
 async def update_user(user_id: int, user_data: UserUpdate) -> str:
-    """Update user with given data"""
-    return user_service_client.update_user(user_id, user_data)
+    """Update an existing user by ID. Only provided fields should change."""
+    try:
+        return user_service_client.update_user(user_id, user_data)
+    except Exception as e:
+        return f"Error updating user {user_id}: {e}"
 
 
 # ==================== MCP RESOURCES ====================
