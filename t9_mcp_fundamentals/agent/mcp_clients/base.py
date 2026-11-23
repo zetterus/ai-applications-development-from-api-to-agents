@@ -23,6 +23,17 @@ class MCPClient(ABC):
         """Get available tools from MCP server"""
         if not self.client:
             raise RuntimeError("MCP client not connected. Call connect() first.")
+        response = await self.client.list_tools()
+        tools = response.tools
+        return [
+            {
+                "type": "function",
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": tool.input_schema,
+            }
+            for tool in tools
+        ]
         #TODO:
         # 1. Call `await self.client.list_tools()` and assign to `tools`
         # 2. Return list with dicts with tool schemas. It should be provided according to OpenAI specification

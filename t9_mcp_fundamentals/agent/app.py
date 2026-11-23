@@ -7,7 +7,7 @@ from pathlib import Path
 from mcp import Resource
 from mcp.types import Prompt
 
-from commons.constants import OPENAI_API_KEY
+from commons.constants import ANTHROPIC_API_KEY, ANTHROPIC_HAIKU_MODEL
 from commons.models.message import Message
 from commons.models.role import Role
 from t9_mcp_fundamentals.agent.agent import AgentMCPFundamentals
@@ -22,7 +22,8 @@ async def main():
     #    (`async with ... as mcp_client:`) — all steps below happen inside this block
     # 2. Print Available Resources
     # 3. Print Available Tools
-    # 4. Create `AgentMCPFundamentals`
+    # 4. Create `AgentMCPFundamentals` with `api_key=ANTHROPIC_API_KEY`, `model=ANTHROPIC_HAIKU_MODEL`,
+    #    `tools` from `mcp_client.get_tools()` and `mcp_client` (Anthropic is used instead of OpenAI)
     # 5. Create `messages` list with a single system prompt
     # 6. Print Available Prompts
     # 7. Run an infinite loop:
