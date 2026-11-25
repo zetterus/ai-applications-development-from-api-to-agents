@@ -1,4 +1,5 @@
 import json
+from collections.abc import Mapping
 from typing import Any
 
 from anthropic import AsyncAnthropic, omit
@@ -12,13 +13,31 @@ MAX_TOKENS = 4096
 
 
 class AgentMCPFundamentals:
-    """Handles AI model interactions and integrates with MCP client"""
+    """Handles AI model interactions and integrates with one or more MCP clients"""
 
-    def __init__(self, api_key: str, model: str, tools: list[dict[str, Any]], mcp_client: MCPClient):
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        tools: list[dict[str, Any]],
+        mcp_client: MCPClient | Mapping[str, MCPClient],
+    ):
         self.model = model
         self.tools = self._to_anthropic_tools(tools)
-        self.mcp_client = mcp_client
+        if isinstance(mcp_client, Mapping):
+            self.tool_clients: dict[str, MCPClient] = dict(mcp_client)
+            self.default_client: MCPClient | None = None
+        else:
+            self.tool_clients = {}
+            self.default_client = mcp_client
         self.client = AsyncAnthropic(api_key=api_key)
+
+    def _get_client_for_tool(self, tool_name: str) -> MCPClient:
+        """Return the MCP client responsible for executing `tool_name`."""
+        client = self.tool_clients.get(tool_name) or self.default_client
+        if client is None:
+            raise ValueError(f"No MCP client registered for tool '{tool_name}'.")
+        return client
 
     @staticmethod
     def _to_anthropic_tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -125,16 +144,23 @@ class AgentMCPFundamentals:
         return ai_message
 
     async def _call_tools(self, ai_message: Message, messages: list[Message]):
-        """Execute tool calls using MCP client"""
-        #TODO:
-        # 1. Iterate through `ai_message.tool_calls` (each item looks like
-        #    {"id": ..., "type": "function", "function": {"name": ..., "arguments": "<JSON string>"}})
-        # 2. Get tool name (`function.name`) and tool arguments (`function.arguments` is a JSON string, so parse it
-        #    with `json.loads` into a dict before passing to the MCP client)
-        # 3. Wrap into try/except block and call mcp_client tool call. If succeed then append a tool message
-        #    `Message(role=Role.TOOL, ...)` with the result (don't forget `tool_call_id` = tool call id and `name`),
-        #    otherwise append a tool message with the error text (it kind of fallback strategy).
-        #    IMPORTANT for Anthropic: every `tool_use` MUST get a `tool_result`, otherwise the next request fails with
-        #    400. So add a tool message for EVERY tool call, even a failed one. The history is converted to
-        #    `tool_result` blocks in `_to_anthropic_messages`.
-        raise NotImplementedError()
+        """Execute tool calls using the matching MCP client for each tool"""
+        for tool_call in ai_message.tool_calls or []:
+            tool_call_id = tool_call["id"]
+            tool_name = tool_call["function"]["name"]
+            try:
+                tool_args = json.loads(tool_call["function"].get("arguments") or "{}")
+                mcp_client = self._get_client_for_tool(tool_name)
+                result = await mcp_client.call_tool(tool_name, tool_args)
+                content = result if isinstance(result, str) else str(result)
+            except Exception as e:
+                content = f"Error calling tool '{tool_name}': {e}"
+
+            messages.append(
+                Message(
+                    role=Role.TOOL,
+                    content=content,
+                    tool_call_id=tool_call_id,
+                    name=tool_name,
+                )
+            )
